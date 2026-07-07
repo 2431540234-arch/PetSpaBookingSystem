@@ -25,6 +25,8 @@ public class PetRequest {
 
     private String emoji;
 
+    private String imageUrl;
+
     // Getters and Setters
     public String getName() {
         return name;
@@ -104,6 +106,14 @@ public class PetRequest {
 
     public void setEmoji(String emoji) {
         this.emoji = emoji;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
     }
 }
 

@@ -3,6 +3,7 @@ package com.petspa.backend.service;
 import com.petspa.backend.dto.request.LoginRequest;
 import com.petspa.backend.dto.response.AuthResponse;
 import com.petspa.backend.entity.User;
+import com.petspa.backend.exception.ResourceNotFoundException;
 import com.petspa.backend.repository.UserRepository;
 import com.petspa.backend.security.JwtTokenProvider;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -40,5 +41,33 @@ public class AuthService {
 
         String token = jwtTokenProvider.generateToken(user);
         return new AuthResponse(token, user);
+    }
+
+    public User getUserById(String userId) {
+        Long id = Long.valueOf(userId);
+        return userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
+    }
+
+    public User updateUserProfile(String userId, User request) {
+        Long id = Long.valueOf(userId);
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
+
+        // Partial update - only allowed fields
+        if (request.getName() != null) user.setName(request.getName());
+        if (request.getPhone() != null) user.setPhone(request.getPhone());
+        if (request.getGender() != null) user.setGender(request.getGender());
+        if (request.getDob() != null) user.setDob(request.getDob());
+        if (request.getAddress() != null) user.setAddress(request.getAddress());
+        if (request.getAvatarUrl() != null) user.setAvatarUrl(request.getAvatarUrl());
+
+        // Never update these fields
+        // - id (primary key)
+        // - email (unique identifier)
+        // - password_hash (requires special handling)
+        // - role (should use separate endpoint)
+
+        return userRepository.save(user);
     }
 }

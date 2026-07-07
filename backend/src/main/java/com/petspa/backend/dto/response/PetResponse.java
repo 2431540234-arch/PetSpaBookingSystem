@@ -24,6 +24,8 @@ public class PetResponse {
 
     private String emoji;
 
+    private String imageUrl;
+
     private Long customerId;
 
     // Getters and Setters
@@ -113,6 +115,14 @@ public class PetResponse {
 
     public void setEmoji(String emoji) {
         this.emoji = emoji;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
     }
 
     public Long getCustomerId() {

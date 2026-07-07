@@ -2,9 +2,9 @@ package com.petspa.backend.dto.response;
 
 public class ShiftResponse {
 
-    private Long id;
+    private String id;
 
-    private Long staffId;
+    private String staffId;
 
     private String date;
 
@@ -17,19 +17,19 @@ public class ShiftResponse {
     private String status;
 
     // Getters and Setters
-    public Long getId() {
+    public String getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(String id) {
         this.id = id;
     }
 
-    public Long getStaffId() {
+    public String getStaffId() {
         return staffId;
     }
 
-    public void setStaffId(Long staffId) {
+    public void setStaffId(String staffId) {
         this.staffId = staffId;
     }
 

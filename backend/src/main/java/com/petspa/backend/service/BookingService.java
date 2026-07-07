@@ -58,6 +58,7 @@ public class BookingService {
 
         // Gửi notification (convert ids to String for notification service until refactor)
         notificationService.notifyBookingCreated(String.valueOf(customerId), String.valueOf(savedBooking.getId()));
+        notificationService.notifyOwnerNewBooking(String.valueOf(savedBooking.getId()));
 
         return convertToResponse(savedBooking);
     }
@@ -116,6 +117,9 @@ public class BookingService {
         // Gửi notification theo trạng thái (convert ids to String)
         if ("CONFIRMED".equalsIgnoreCase(status)) {
             notificationService.notifyBookingConfirmed(String.valueOf(booking.getCustomerId()), String.valueOf(bookingId));
+            if (booking.getStaffId() != null) {
+                notificationService.notifyStaffNewBooking(String.valueOf(booking.getStaffId()), String.valueOf(bookingId));
+            }
         } else if ("COMPLETED".equalsIgnoreCase(status)) {
             notificationService.notifyServiceCompleted(String.valueOf(booking.getCustomerId()), String.valueOf(bookingId));
         }

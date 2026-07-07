@@ -37,11 +37,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import coil.compose.AsyncImage
 import com.petspa.app.model.Pet
 import com.petspa.app.model.UiState
 import com.petspa.app.ui.shared.*
+import com.petspa.app.util.ImageUtils
 import com.petspa.app.viewmodel.CustomerViewModel
+import java.io.File
 import android.graphics.Bitmap
 
 @Composable
@@ -215,17 +218,21 @@ fun PetFormScreen(vm: CustomerViewModel, petId: String? = null, onBack: () -> Un
     var medicalHistory by remember { mutableStateOf(existingPet?.medicalHistory ?: "") }
     var notes by remember { mutableStateOf(existingPet?.notes ?: "") }
     
-    var imageUri by remember { mutableStateOf<Any?>(existingPet?.imageUrl) }
+    var imageUri by remember { mutableStateOf<Uri?>(existingPet?.imageUrl?.let { Uri.parse(it) }) }
+    var tempCameraUri by remember { mutableStateOf<Uri?>(null) }
     var isImageConfirmed by remember { mutableStateOf(existingPet?.imageUrl != null) }
     var showPhotoOptions by remember { mutableStateOf(false) }
+
+    val uploadState by vm.imageUploadState.collectAsState()
+    val isUploading = uploadState is UiState.Loading
 
     val speciesEmojis = mapOf("Chó" to "🐕", "Mèo" to "🐈", "Thỏ" to "🐇", "Chim" to "🐦", "Cá" to "🐠", "Khác" to "🐾")
 
     // Camera Launcher
-    val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap ->
-        if (bitmap != null) {
-            imageUri = bitmap
-            isImageConfirmed = false // Đợi xác nhận
+    val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
+        if (success) {
+            imageUri = tempCameraUri
+            isImageConfirmed = false
         }
     }
 
@@ -233,13 +240,38 @@ fun PetFormScreen(vm: CustomerViewModel, petId: String? = null, onBack: () -> Un
     val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) {
             imageUri = uri
-            isImageConfirmed = false // Đợi xác nhận
+            isImageConfirmed = false
+        }
+    }
+
+    // Effect to handle upload success
+    LaunchedEffect(uploadState) {
+        if (uploadState is UiState.Success) {
+            isImageConfirmed = true
+        }
+    }
+
+    fun startCamera() {
+        val file = File(context.cacheDir, "camera_temp_${System.currentTimeMillis()}.jpg")
+        val uri = FileProvider.getUriForFile(context, "com.petspa.app.fileprovider", file)
+        tempCameraUri = uri
+        cameraLauncher.launch(uri)
+    }
+
+    fun handleConfirmImage() {
+        imageUri?.let { uri ->
+            val file = ImageUtils.uriToFile(context, uri)
+            if (file != null) {
+                val compressed = ImageUtils.compressAndResizeImage(context, file)
+                val part = ImageUtils.toMultipartBody(compressed)
+                vm.uploadImage(part, "pet")
+            }
         }
     }
 
     // Permission Launchers
     val cameraPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
-        if (isGranted) cameraLauncher.launch(null)
+        if (isGranted) startCamera()
     }
 
     val galleryPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
@@ -260,7 +292,7 @@ fun PetFormScreen(vm: CustomerViewModel, petId: String? = null, onBack: () -> Un
                             showPhotoOptions = false
                             val permission = Manifest.permission.CAMERA
                             if (ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED) {
-                                cameraLauncher.launch(null)
+                                startCamera()
                             } else {
                                 cameraPermissionLauncher.launch(permission)
                             }
@@ -339,18 +371,25 @@ fun PetFormScreen(vm: CustomerViewModel, petId: String? = null, onBack: () -> Un
                 if (imageUri != null && !isImageConfirmed) {
                     Spacer(Modifier.height(12.dp))
                     Button(
-                        onClick = { isImageConfirmed = true },
+                        onClick = { handleConfirmImage() },
+                        enabled = !isUploading,
                         colors = ButtonDefaults.buttonColors(containerColor = PetSpaColors.Success),
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.height(36.dp),
                         contentPadding = PaddingValues(horizontal = 16.dp)
                     ) {
-                        Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp))
+                        if (isUploading) {
+                            CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color.White, strokeWidth = 2.dp)
+                        } else {
+                            Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp))
+                        }
                         Spacer(Modifier.width(8.dp))
-                        Text("Xác nhận ảnh này", fontSize = 13.sp)
+                        Text(if (isUploading) "Đang tải lên..." else "Xác nhận ảnh này", fontSize = 13.sp)
                     }
-                    TextButton(onClick = { imageUri = null }) {
-                        Text("Hủy bỏ", color = PetSpaColors.Destructive, fontSize = 12.sp)
+                    if (!isUploading) {
+                        TextButton(onClick = { imageUri = null }) {
+                            Text("Hủy bỏ", color = PetSpaColors.Destructive, fontSize = 12.sp)
+                        }
                     }
                 } else if (isImageConfirmed) {
                     Spacer(Modifier.height(8.dp))
@@ -429,6 +468,8 @@ fun PetFormScreen(vm: CustomerViewModel, petId: String? = null, onBack: () -> Un
 
             Spacer(Modifier.height(32.dp))
             PrimaryButton("Lưu Thú Cưng", onClick = {
+                val finalImageUrl = (uploadState as? UiState.Success)?.data ?: existingPet?.imageUrl
+                
                 val p = Pet(
                     id = existingPet?.id ?: "p${System.currentTimeMillis()}",
                     name = name,
@@ -441,11 +482,12 @@ fun PetFormScreen(vm: CustomerViewModel, petId: String? = null, onBack: () -> Un
                     medicalHistory = medicalHistory,
                     notes = notes,
                     emoji = speciesEmojis[species] ?: "🐾",
-                    imageUrl = if (isImageConfirmed) imageUri?.toString() else null
+                    imageUrl = finalImageUrl
                 )
                 if (existingPet == null) vm.addPet(p) else vm.updatePet(p)
+                vm.clearImageUploadState()
                 onSaved()
-            })
+            }, enabled = !isUploading)
             Spacer(Modifier.height(40.dp))
         }
     }

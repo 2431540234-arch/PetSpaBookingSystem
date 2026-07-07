@@ -4,8 +4,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.petspa.app.model.*
 import com.petspa.app.repository.PetSpaRepository
+import com.google.firebase.messaging.FirebaseMessaging
+import android.util.Log
+import okhttp3.MultipartBody
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
 class OwnerViewModel(
     private val repo: PetSpaRepository
@@ -35,9 +39,41 @@ class OwnerViewModel(
     private val _topServices = MutableStateFlow<UiState<List<TopService>>>(UiState.Loading)
     val topServices: StateFlow<UiState<List<TopService>>> = _topServices.asStateFlow()
 
+    private val _imageUploadState = MutableStateFlow<UiState<String>?>(null)
+    val imageUploadState: StateFlow<UiState<String>?> = _imageUploadState.asStateFlow()
+
+    fun uploadImage(filePart: MultipartBody.Part, type: String) {
+        viewModelScope.launch {
+            _imageUploadState.value = UiState.Loading
+            val url = repo.uploadImage(filePart, type)
+            if (url != null) {
+                _imageUploadState.value = UiState.Success(url)
+            } else {
+                _imageUploadState.value = UiState.Error("Upload thất bại")
+            }
+        }
+    }
+
+    fun clearImageUploadState() {
+        _imageUploadState.value = null
+    }
+
     init {
         observeAll()
         loadDashboard()
+        syncFcmToken()
+    }
+
+    private fun syncFcmToken() {
+        viewModelScope.launch {
+            try {
+                val token = FirebaseMessaging.getInstance().token.await()
+                repo.updateFcmToken(token)
+                Log.d("FCM", "Owner Token synced: $token")
+            } catch (e: Exception) {
+                Log.e("FCM", "Failed to sync owner token", e)
+            }
+        }
     }
 
     private fun observeAll() {

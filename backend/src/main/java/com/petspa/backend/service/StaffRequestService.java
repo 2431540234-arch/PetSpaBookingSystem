@@ -31,6 +31,9 @@ public class StaffRequestService {
         staffRequest.setStatus("pending");
 
         StaffRequest savedRequest = staffRequestRepository.save(staffRequest);
+        
+        notificationService.notifyOwnerNewRequest(String.valueOf(savedRequest.getId()), "Nhân viên ID: " + staffId);
+
         return convertToResponse(savedRequest);
     }
 

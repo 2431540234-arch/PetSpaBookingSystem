@@ -4,9 +4,9 @@ import java.time.LocalDateTime;
 
 public class StaffRequestResponse {
 
-    private Long id;
+    private String id;
 
-    private Long staffId;
+    private String staffId;
 
     private String type;
 
@@ -19,19 +19,19 @@ public class StaffRequestResponse {
     private LocalDateTime createdAt;
 
     // Getters and Setters
-    public Long getId() {
+    public String getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(String id) {
         this.id = id;
     }
 
-    public Long getStaffId() {
+    public String getStaffId() {
         return staffId;
     }
 
-    public void setStaffId(Long staffId) {
+    public void setStaffId(String staffId) {
         this.staffId = staffId;
     }
 

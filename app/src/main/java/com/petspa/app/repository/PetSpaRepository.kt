@@ -6,11 +6,16 @@ import com.petspa.app.data.TokenDataStore
 import com.petspa.app.model.*
 import com.petspa.app.network.ApiService
 import com.petspa.app.network.LoginRequest
-import com.petspa.app.network.MockData
-import kotlinx.coroutines.flow.Flow
+import com.petspa.app.network.dto.request.PaymentCreateRequest
+import com.petspa.app.network.dto.request.PaymentRequest
+import com.petspa.app.network.dto.response.PaymentResponseDto
+import com.petspa.app.network.dto.response.PaymentTransactionDto
+import com.petspa.app.network.mapper.NetworkMapper.toDomain
+import com.petspa.app.network.mapper.NetworkMapper.toRequest
+import okhttp3.MultipartBody
 import com.petspa.app.data.local.database.PetSpaDatabase
 import com.petspa.app.data.local.mapper.*
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.*
 
 class PetSpaRepository(
     private val api: ApiService,
@@ -74,7 +79,7 @@ class PetSpaRepository(
 
     suspend fun refreshPets() {
         try {
-            val pets = api.getPets()
+            val pets = api.getPets().map { it.toDomain() }
             db.petDao().deleteAll()
             db.petDao().insertAll(pets.map { it.toEntity() })
         } catch (_: Exception) {}
@@ -97,24 +102,39 @@ class PetSpaRepository(
     }
 
     suspend fun refreshServices() {
+        val role = tokenStore.authFlow.firstOrNull()?.role
         try {
-            val services = api.getOwnerServices()
+            val services = if (role == UserRole.OWNER) {
+                api.getOwnerServices().map { it.toDomain() }
+            } else {
+                api.getServices().map { it.toDomain() }
+            }
             db.serviceDao().deleteAll()
             db.serviceDao().insertAll(services.map { it.toEntity() })
         } catch (_: Exception) {}
     }
 
     suspend fun refreshBookings() {
+        val role = tokenStore.authFlow.firstOrNull()?.role
         try {
-            val bookings = api.getOwnerBookings()
+            val bookings = when (role) {
+                UserRole.OWNER -> api.getOwnerBookings().map { it.toDomain() }
+                UserRole.STAFF -> api.getStaffBookings().map { it.toDomain() }
+                else -> api.getCustomerBookings().map { it.toDomain() }
+            }
             db.bookingDao().deleteAll()
             db.bookingDao().insertAll(bookings.map { it.toEntity() })
         } catch (_: Exception) {}
     }
 
     suspend fun refreshNotifications() {
+        val role = tokenStore.authFlow.firstOrNull()?.role
         try {
-            val notifs = api.getCustomerNotifications()
+            val notifs = if (role == UserRole.STAFF) {
+                api.getStaffNotifications().map { it.toDomain() }
+            } else {
+                api.getCustomerNotifications().map { it.toDomain() }
+            }
             db.notificationDao().deleteAll()
             db.notificationDao().insertAll(notifs.map { it.toEntity() })
         } catch (_: Exception) {}
@@ -191,13 +211,13 @@ class PetSpaRepository(
     }
 
     suspend fun addPet(pet: Pet): Pet {
-        val newPet = api.addPet(pet)
+        val newPet = api.addPet(pet).toDomain()
         db.petDao().insertPet(newPet.toEntity())
         return newPet
     }
 
     suspend fun updatePet(id: String, pet: Pet): Pet {
-        val updated = api.updatePet(id, pet)
+        val updated = api.updatePet(id, pet).toDomain()
         db.petDao().updatePet(updated.toEntity())
         return updated
     }
@@ -218,7 +238,7 @@ class PetSpaRepository(
     }
 
     suspend fun createBooking(booking: BookingDraft): Booking {
-        val newBooking = api.createBooking(booking)
+        val newBooking = api.createBooking(booking.toRequest()).toDomain()
         db.bookingDao().insertBooking(newBooking.toEntity())
         return newBooking
     }
@@ -233,7 +253,18 @@ class PetSpaRepository(
     }
 
     suspend fun rescheduleBooking(id: String, date: String, time: String): Booking {
-        val updated = api.rescheduleBooking(id, mapOf("date" to date, "time" to time))
+        val updated = api.rescheduleBooking(id, mapOf("date" to date, "time" to time)).toDomain()
+        db.bookingDao().updateBooking(updated.toEntity())
+        return updated
+    }
+
+    suspend fun updatePayment(id: String, status: String, amount: Long, txId: String): Booking {
+        val request = PaymentRequest(
+            paymentStatus = status,
+            paidAmount = java.math.BigDecimal.valueOf(amount),
+            transactionId = txId
+        )
+        val updated = api.updatePayment(id, request).toDomain()
         db.bookingDao().updateBooking(updated.toEntity())
         return updated
     }
@@ -259,6 +290,25 @@ class PetSpaRepository(
         return User("", "", "", "")
     }
 
+    suspend fun updateCustomerUser(name: String, phone: String, gender: String, dob: String, address: String, avatarUrl: String?) {
+        val request = com.petspa.app.network.dto.request.UpdateUserRequest(
+            name = name,
+            phone = phone,
+            gender = gender,
+            dob = dob,
+            address = address,
+            avatarUrl = avatarUrl
+        )
+        val updated = api.updateCustomerUser(request)
+        db.userDao().insertUser(updated.toEntity())
+    }
+
+    suspend fun updateFcmToken(token: String) {
+        try {
+            api.updateFcmToken(mapOf("token" to token))
+        } catch (_: Exception) {}
+    }
+
     suspend fun getStaffBookings(): List<Booking> {
         refreshBookings()
         return emptyList()
@@ -277,6 +327,12 @@ class PetSpaRepository(
     suspend fun getTechnicianProfile(): TechnicianProfile {
         refreshTechnicianProfile()
         return TechnicianProfile("", "", "", "", "", "", emptyList(), "", "", "", "")
+    }
+
+    suspend fun updateTechnicianProfile(profile: TechnicianProfile): TechnicianProfile {
+        val updated = api.updateTechnicianProfile(profile)
+        db.technicianProfileDao().insertProfile(updated.toEntity())
+        return updated
     }
 
     suspend fun getCustomers(): List<Customer> {
@@ -329,13 +385,13 @@ class PetSpaRepository(
     }
 
     suspend fun addService(s: Service): Service {
-        val newService = api.addService(s)
+        val newService = api.addService(s).toDomain()
         db.serviceDao().insertService(newService.toEntity())
         return newService
     }
 
     suspend fun updateService(id: String, s: Service): Service {
-        val updated = api.updateService(id, s)
+        val updated = api.updateService(id, s).toDomain()
         db.serviceDao().updateService(updated.toEntity())
         return updated
     }
@@ -377,7 +433,36 @@ class PetSpaRepository(
         return updated
     }
 
-    fun getStaffForBooking() = MockData.staffMembers
-    fun getTimeSlots() = MockData.timeSlots
-    fun getBookedSlots(date: String) = MockData.bookedSlots[date] ?: emptyList()
+    suspend fun getAvailableStaff(date: String): List<StaffAvailabilityResponse> {
+        return api.getAvailableStaff(date)
+    }
+
+    suspend fun createPayment(bookingId: Long, gateway: String): PaymentResponseDto {
+        return api.createPayment(PaymentCreateRequest(bookingId, gateway))
+    }
+
+    suspend fun getPaymentStatus(bookingId: Long): PaymentTransactionDto {
+        return api.getPaymentStatus(bookingId)
+    }
+
+    suspend fun uploadImage(filePart: MultipartBody.Part, type: String): String? {
+        return try {
+            val response = api.uploadImage(filePart, type)
+            response["url"]
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    fun getTimeSlots(staffId: String, date: String, staffList: List<StaffAvailabilityResponse>): List<String> {
+        return if (staffId == "any" || staffId.isEmpty()) {
+            // Lấy hợp (Union) của tất cả slots từ tất cả nhân viên rảnh
+            staffList.flatMap { it.availableSlots }.distinct().sorted()
+        } else {
+            // Lấy slots của nhân viên cụ thể
+            staffList.find { it.staffId.toString() == staffId }?.availableSlots ?: emptyList()
+        }
+    }
+
+    fun getBookedSlots(date: String) = emptyList<String>() // Sẽ xử lý bằng cách ẩn các slot không có trong availableSlots
 }

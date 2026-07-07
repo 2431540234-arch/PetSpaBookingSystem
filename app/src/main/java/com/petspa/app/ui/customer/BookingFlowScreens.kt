@@ -24,19 +24,26 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.browser.customtabs.CustomTabsIntent
+import android.net.Uri
+import android.content.Context
+import androidx.compose.ui.platform.LocalContext
 import com.petspa.app.model.BookingDraft
 import com.petspa.app.model.UiState
-import com.petspa.app.ui.shared.AppCard
-import com.petspa.app.ui.shared.BackHeader
-import com.petspa.app.ui.shared.EmptyView
-import com.petspa.app.ui.shared.InputField
-import com.petspa.app.ui.shared.InfoRow
-import com.petspa.app.ui.shared.PetSpaColors
-import com.petspa.app.ui.shared.PrimaryButton
-import com.petspa.app.ui.shared.SecondaryButton
-import com.petspa.app.ui.shared.UiStateContent
-import com.petspa.app.ui.shared.formatVnd
+import com.petspa.app.network.dto.response.PaymentResponseDto
+import com.petspa.app.ui.shared.*
 import com.petspa.app.viewmodel.CustomerViewModel
+
+private fun openPaymentUrl(context: Context, url: String) {
+    try {
+        val intent = CustomTabsIntent.Builder().build()
+        intent.launchUrl(context, Uri.parse(url))
+    } catch (e: Exception) {
+        // Fallback
+        val browserIntent = android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(url))
+        context.startActivity(browserIntent)
+    }
+}
 
 @Composable
 fun StepIndicator(current: Int, total: Int) {
@@ -135,7 +142,7 @@ fun BookStep1Screen(vm: CustomerViewModel, onBack: () -> Unit, onNext: () -> Uni
     val draft by vm.bookingDraft.collectAsState()
 
     BookStepScaffold(
-        step = 1, total = 8,
+        step = 1, total = 7,
         title = "Chọn Thú Cưng",
         subtitle = "Thú cưng nào cần được chăm sóc?",
         onBack = onBack,
@@ -183,7 +190,7 @@ fun BookStep2Screen(vm: CustomerViewModel, onBack: () -> Unit, onNext: () -> Uni
 
     Column(Modifier.fillMaxSize().background(Color(0xFFFBFBFB))) {
         BackHeader("Đặt Lịch", onBack)
-        StepIndicator(2, 8)
+        StepIndicator(2, 7)
         
         // Category Filter
         LazyRow(contentPadding = PaddingValues(16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -243,7 +250,7 @@ fun BookStep3Screen(vm: CustomerViewModel, onBack: () -> Unit, onNext: () -> Uni
     var date by rememberSaveable { mutableStateOf(draft.date) }
 
     BookStepScaffold(
-        step = 3, total = 8,
+        step = 3, total = 7,
         title = "Chọn Ngày",
         subtitle = "Chọn ngày bạn muốn đặt lịch",
         onBack = onBack,
@@ -285,7 +292,7 @@ fun BookStep3Screen(vm: CustomerViewModel, onBack: () -> Unit, onNext: () -> Uni
     }
 }
 
-// Step 4: Select Time
+// Step 5: Select Time (Refactored from Step 4)
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun BookStep4Screen(vm: CustomerViewModel, onBack: () -> Unit, onNext: () -> Unit) {
@@ -295,7 +302,7 @@ fun BookStep4Screen(vm: CustomerViewModel, onBack: () -> Unit, onNext: () -> Uni
     var time by rememberSaveable { mutableStateOf(draft.time) }
 
     BookStepScaffold(
-        step = 4, total = 8,
+        step = 5, total = 7,
         title = "Chọn Giờ",
         subtitle = "Ngày ${draft.date}",
         onBack = onBack,
@@ -335,15 +342,15 @@ fun BookStep4Screen(vm: CustomerViewModel, onBack: () -> Unit, onNext: () -> Uni
     }
 }
 
-// Step 5: Select Staff
+// Step 4: Select Staff (Refactored from Step 5)
 @Composable
 fun BookStep5Screen(vm: CustomerViewModel, onBack: () -> Unit, onNext: () -> Unit) {
     val draft by vm.bookingDraft.collectAsState()
-    val staff = vm.getStaff()
+    val staffState by vm.availableStaff.collectAsState()
     var selectedStaffId by rememberSaveable { mutableStateOf(draft.staffId) }
 
     BookStepScaffold(
-        step = 5, total = 8,
+        step = 4, total = 7,
         title = "Chọn Nhân Viên",
         subtitle = "Ai sẽ chăm sóc thú cưng của bạn?",
         onBack = onBack,
@@ -353,23 +360,25 @@ fun BookStep5Screen(vm: CustomerViewModel, onBack: () -> Unit, onNext: () -> Uni
         },
         nextEnabled = selectedStaffId.isNotEmpty()
     ) {
-        staff.forEach { st ->
-            val isSelected = selectedStaffId == st.id
-            AppCard(
-                modifier = Modifier.padding(bottom = 12.dp),
-                onClick = { selectedStaffId = st.id }
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(st.emoji, fontSize = 40.sp)
-                    Spacer(Modifier.width(16.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(st.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
-                        Text(st.specialty, style = MaterialTheme.typography.bodySmall, color = PetSpaColors.MutedForeground)
-                        Text("● Đang rảnh", color = Color(0xFF22C55E), fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                    }
-                    if (isSelected) {
-                        Box(Modifier.size(24.dp).background(PetSpaColors.PetPink, CircleShape), contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.Check, null, tint = Color.White, modifier = Modifier.size(16.dp))
+        UiStateContent(staffState, { vm.loadAvailableStaff(draft.date) }) { list ->
+            list.forEach { st ->
+                val isSelected = selectedStaffId == st.staffId.toString()
+                AppCard(
+                    modifier = Modifier.padding(bottom = 12.dp),
+                    onClick = { selectedStaffId = st.staffId.toString() }
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(st.avatar.ifEmpty { "👤" }, fontSize = 40.sp)
+                        Spacer(Modifier.width(16.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(st.staffName, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+                            Text(st.specialty, style = MaterialTheme.typography.bodySmall, color = PetSpaColors.MutedForeground)
+                            Text("● Đang rảnh", color = Color(0xFF22C55E), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        }
+                        if (isSelected) {
+                            Box(Modifier.size(24.dp).background(PetSpaColors.PetPink, CircleShape), contentAlignment = Alignment.Center) {
+                                Icon(Icons.Default.Check, null, tint = Color.White, modifier = Modifier.size(16.dp))
+                            }
                         }
                     }
                 }
@@ -434,7 +443,7 @@ fun BookStep6Screen(vm: CustomerViewModel, onBack: () -> Unit, onNext: () -> Uni
     }
 }
 
-// Step 7: Confirm
+// Step 6: Confirm (Refactored from Step 7 & 6)
 @Composable
 fun BookStep7Screen(vm: CustomerViewModel, onBack: () -> Unit, onNext: () -> Unit) {
     val draft by vm.bookingDraft.collectAsState()
@@ -444,7 +453,7 @@ fun BookStep7Screen(vm: CustomerViewModel, onBack: () -> Unit, onNext: () -> Uni
     val staff = vm.getStaff().find { it.id == draft.staffId }
 
     BookStepScaffold(
-        step = 7, total = 8,
+        step = 6, total = 7,
         title = "Xác Nhận",
         subtitle = "Kiểm tra lại thông tin đặt lịch",
         onBack = onBack,
@@ -455,13 +464,24 @@ fun BookStep7Screen(vm: CustomerViewModel, onBack: () -> Unit, onNext: () -> Uni
             InfoRow("✂️ Dịch vụ", "${service?.emoji} ${service?.name}")
             InfoRow("📅 Ngày", draft.date)
             InfoRow("⏰ Giờ", draft.time)
-            InfoRow("👤 Nhân viên", staff?.name ?: "Bất kỳ")
-            if (draft.notes.isNotEmpty()) {
-                Spacer(Modifier.height(12.dp))
-                Text("📝 Ghi chú", fontSize = 12.sp, color = PetSpaColors.MutedForeground)
-                Text(draft.notes, style = MaterialTheme.typography.bodySmall)
-            }
+            InfoRow("👤 Nhân viên", if (draft.staffId == "any") "Bất kỳ" else staff?.name ?: "Bất kỳ")
         }
+        
+        Spacer(Modifier.height(16.dp))
+
+        Text("Ghi chú", style = MaterialTheme.typography.labelMedium)
+        Spacer(Modifier.height(8.dp))
+        OutlinedTextField(
+            value = draft.notes,
+            onValueChange = { vm.updateDraft(draft.copy(notes = it)) },
+            modifier = Modifier.fillMaxWidth().height(100.dp),
+            placeholder = { Text("Thêm yêu cầu đặc biệt...", fontSize = 14.sp) },
+            shape = RoundedCornerShape(16.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = PetSpaColors.PetPink,
+                unfocusedBorderColor = Color(0xFFEEEEEE)
+            )
+        )
         
         Spacer(Modifier.height(16.dp))
         
@@ -480,127 +500,58 @@ fun BookStep7Screen(vm: CustomerViewModel, onBack: () -> Unit, onNext: () -> Uni
     }
 }
 
-// Step 8: Payment
+// Step 7: Payment (Refactored from Step 8)
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun BookStep8Screen(vm: CustomerViewModel, onBack: () -> Unit, onConfirm: () -> Unit) {
+    val context = LocalContext.current
     val draft by vm.bookingDraft.collectAsState()
     val servicesState by vm.services.collectAsState()
     val service = (servicesState as? UiState.Success)?.data?.find { it.id == draft.serviceId }
+    
     val confirmState by vm.confirmBookingState.collectAsState()
+    val paymentState by vm.paymentState.collectAsState()
 
-    var payType by rememberSaveable { mutableStateOf("deposit") } // "deposit" | "full"
-    var method by rememberSaveable { mutableStateOf("cash") } // "cash" | "momo" | "vnpay"
-    var momoScreen by rememberSaveable { mutableStateOf(false) }
-    var vnpayScreen by rememberSaveable { mutableStateOf(false) }
+    var payType by rememberSaveable { mutableStateOf("full") } // "deposit" | "full"
+    var method by rememberSaveable { mutableStateOf("momo") } // "cash" | "momo" | "vnpay" | "zalopay"
 
     val total = service?.price ?: 0L
     val payAmount = if (payType == "deposit") total / 2 else total
-    val isLoading = confirmState is UiState.Loading
-
-    fun methodLabel() = when (method) {
-        "momo" -> "MoMo"
-        "vnpay" -> "VNPay"
-        else -> "Tiền mặt"
-    }
+    val isLoading = confirmState is UiState.Loading || paymentState is UiState.Loading
 
     fun finalize() {
-        vm.confirmBooking(payType, methodLabel())
+        vm.confirmBooking(payType, method.uppercase())
     }
 
+    // Effect to handle booking success and trigger payment link creation
     LaunchedEffect(confirmState) {
-        if (confirmState is UiState.Success) {
-            momoScreen = false
-            vnpayScreen = false
-            vm.clearConfirmBookingState()
-            onConfirm()
+        val state = confirmState
+        if (state is UiState.Success) {
+            val booking = state.data
+            if (method == "cash") {
+                onConfirm()
+            } else {
+                vm.createPayment(booking.id.toLong(), method)
+            }
         }
     }
 
-    // Màn hình giả lập thanh toán MoMo
-    if (momoScreen) {
-        PaymentSimScreen(
-            title = "Thanh toán MoMo",
-            icon = "💜",
-            iconBg = Color(0xFFD82D8B).copy(alpha = 0.13f),
-            headline = "Đang mở ứng dụng MoMo...",
-            amount = payAmount,
-            isLoading = isLoading,
-            errorMessage = (confirmState as? UiState.Error)?.message,
-            confirmLabel = "✅ Xác Nhận Đã Thanh Toán",
-            onConfirm = { finalize() },
-            onCancel = { momoScreen = false; vm.clearConfirmBookingState() }
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color(0xFFD82D8B).copy(alpha = 0.06f), RoundedCornerShape(16.dp))
-                    .border(2.dp, Color(0xFFD82D8B), RoundedCornerShape(16.dp))
-                    .padding(16.dp),
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                    Text("MoMo: 0912 345 678", color = Color(0xFFD82D8B), fontWeight = FontWeight.Bold)
-                    Text("Pet Spa Booking System", fontSize = 12.sp, color = PetSpaColors.MutedForeground)
-                    Text("Nội dung: ${draft.petId.uppercase()}${draft.serviceId.uppercase()}", fontSize = 12.sp, color = PetSpaColors.MutedForeground)
-                }
-            }
+    // Effect to handle payment link and open browser
+    LaunchedEffect(paymentState) {
+        val state = paymentState
+        if (state is UiState.Success) {
+            val payUrl = state.data.payUrl
+            openPaymentUrl(context, payUrl)
+            onConfirm() // Go to success screen which will check status
         }
-        return
-    }
-
-    // Màn hình giả lập thanh toán VNPay (QR code)
-    if (vnpayScreen) {
-        PaymentSimScreen(
-            title = "Thanh toán VNPay",
-            icon = "🏦",
-            iconBg = Color(0xFF0066B3).copy(alpha = 0.13f),
-            headline = "Quét mã bằng ứng dụng ngân hàng",
-            amount = payAmount,
-            isLoading = isLoading,
-            errorMessage = (confirmState as? UiState.Error)?.message,
-            confirmLabel = "✅ Xác Nhận Đã Quét Mã",
-            onConfirm = { finalize() },
-            onCancel = { vnpayScreen = false; vm.clearConfirmBookingState() }
-        ) {
-            // Fake QR code
-            Box(
-                modifier = Modifier
-                    .size(140.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Color(0xFF0066B3))
-                    .padding(12.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Column {
-                    repeat(5) { row ->
-                        Row {
-                            repeat(5) { col ->
-                                Box(
-                                    modifier = Modifier
-                                        .size(20.dp)
-                                        .padding(1.dp)
-                                        .background(if ((row + col) % 2 == 0) Color.White else Color(0xFF0066B3))
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        return
     }
 
     BookStepScaffold(
-        step = 8, total = 8,
+        step = 7, total = 7,
         title = "Thanh Toán",
         subtitle = "Chọn phương thức thanh toán",
         onBack = onBack,
-        onNext = {
-            when (method) {
-                "momo" -> momoScreen = true
-                "vnpay" -> vnpayScreen = true
-                else -> finalize()
-            }
-        },
+        onNext = { finalize() },
         nextEnabled = !isLoading
     ) {
         // Tổng kết hóa đơn
@@ -614,10 +565,10 @@ fun BookStep8Screen(vm: CustomerViewModel, onBack: () -> Unit, onConfirm: () -> 
         Text("Lựa chọn thanh toán", fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(12.dp))
 
-        // Loại thanh toán: Đặt cọc 50% hoặc Thanh toán 100%
+        // Loại thanh toán
         val payOptions = listOf(
-            Triple("deposit", "🔖" to "Đặt cọc 50%", "Thanh toán ${formatVnd(total / 2)} ngay"),
-            Triple("full", "💯" to "Thanh toán 100%", "Thanh toán đầy đủ ${formatVnd(total)}")
+            Triple("full", "💯" to "Thanh toán 100%", "Thanh toán đầy đủ ${formatVnd(total)}"),
+            Triple("deposit", "🔖" to "Đặt cọc 50%", "Thanh toán ${formatVnd(total / 2)} ngay")
         )
         payOptions.forEach { (value, iconLabel, desc) ->
             val (emoji, label) = iconLabel
@@ -652,19 +603,30 @@ fun BookStep8Screen(vm: CustomerViewModel, onBack: () -> Unit, onConfirm: () -> 
         Text("Phương thức thanh toán", fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(12.dp))
 
-        val methods = listOf("cash" to ("💵" to "Tiền mặt"), "momo" to ("💜" to "MoMo"), "vnpay" to ("🏦" to "VNPay"))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        val methods = listOf(
+            "momo" to ("💜" to "MoMo"),
+            "vnpay" to ("🏦" to "VNPay"),
+            "zalopay" to ("💰" to "ZaloPay"),
+            "cash" to ("💵" to "Tiền mặt")
+        )
+        
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
             methods.forEach { (value, iconLabel) ->
                 val (emoji, label) = iconLabel
                 val isSelected = method == value
                 Box(
                     modifier = Modifier
                         .weight(1f)
+                        .minimumInteractiveComponentSize()
                         .clip(RoundedCornerShape(16.dp))
                         .background(if (isSelected) PetSpaColors.PetPinkSurface else Color.White)
                         .border(1.dp, if (isSelected) PetSpaColors.PetPink else Color(0xFFEEEEEE), RoundedCornerShape(16.dp))
                         .clickable { method = value }
-                        .padding(vertical = 16.dp),
+                        .padding(vertical = 12.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -678,6 +640,11 @@ fun BookStep8Screen(vm: CustomerViewModel, onBack: () -> Unit, onConfirm: () -> 
         if (confirmState is UiState.Error) {
             Spacer(Modifier.height(12.dp))
             Text((confirmState as UiState.Error).message, color = PetSpaColors.Destructive, fontSize = 12.sp)
+        }
+        
+        if (paymentState is UiState.Error) {
+            Spacer(Modifier.height(12.dp))
+            Text((paymentState as UiState.Error).message, color = PetSpaColors.Destructive, fontSize = 12.sp)
         }
 
         Spacer(Modifier.height(24.dp))
@@ -699,69 +666,24 @@ fun BookStep8Screen(vm: CustomerViewModel, onBack: () -> Unit, onConfirm: () -> 
     }
 }
 
-/**
- * Khung màn hình giả lập thanh toán MoMo/VNPay, tương ứng với 2 màn hình
- * "momoScreen"/"vnpayScreen" trong BookStep8 của file BookingFlow.tsx.
- */
-@Composable
-private fun PaymentSimScreen(
-    title: String,
-    icon: String,
-    iconBg: Color,
-    headline: String,
-    amount: Long,
-    isLoading: Boolean,
-    errorMessage: String?,
-    confirmLabel: String,
-    onConfirm: () -> Unit,
-    onCancel: () -> Unit,
-    content: @Composable ColumnScope.() -> Unit
-) {
-    Column(Modifier.fillMaxSize().background(Color.White)) {
-        BackHeader(title, onCancel)
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .padding(24.dp)
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(96.dp)
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(iconBg),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(icon, fontSize = 48.sp)
-            }
-            Spacer(Modifier.height(20.dp))
-            Text(headline, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
-            Spacer(Modifier.height(8.dp))
-            Text("Số tiền cần thanh toán", fontSize = 13.sp, color = PetSpaColors.MutedForeground)
-            Text(formatVnd(amount), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = PetSpaColors.PetPinkDeep)
-            Spacer(Modifier.height(20.dp))
-            content()
-            if (errorMessage != null) {
-                Spacer(Modifier.height(12.dp))
-                Text(errorMessage, color = PetSpaColors.Destructive, fontSize = 12.sp, textAlign = TextAlign.Center)
-            }
-            Spacer(Modifier.height(24.dp))
-            PrimaryButton(confirmLabel, onClick = onConfirm, enabled = !isLoading)
-            Spacer(Modifier.height(8.dp))
-            TextButton(onClick = onCancel, enabled = !isLoading) {
-                Text("Hủy", color = PetSpaColors.MutedForeground)
-            }
-        }
-    }
-}
-
 @Composable
 fun BookSuccessScreen(vm: CustomerViewModel, onHome: () -> Unit, onViewAppts: () -> Unit) {
     val confirmState by vm.confirmBookingState.collectAsState()
-    val booking = (confirmState as? UiState.Success)?.data
+    val paymentStatusState by vm.paymentStatus.collectAsState()
+    
+    // Recovery from SavedStateHandle if confirmState is lost
+    val savedBookingId = vm.savedStateHandle.get<String>("last_booking_id")
+    val bookingFromState = (confirmState as? UiState.Success)?.data
+    val bookingId = bookingFromState?.id ?: savedBookingId
+    
+    val bookingsState by vm.bookings.collectAsState()
+    val booking = bookingFromState ?: (bookingsState as? UiState.Success)?.data?.find { it.id == bookingId }
+
+    LaunchedEffect(bookingId) {
+        if (bookingId != null && (booking?.paymentMethod != "Tiền mặt" || booking == null)) {
+            vm.checkPaymentStatus(bookingId.toLong())
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -778,27 +700,75 @@ fun BookSuccessScreen(vm: CustomerViewModel, onHome: () -> Unit, onViewAppts: ()
                 .background(Brush.linearGradient(listOf(PetSpaColors.PetPink, PetSpaColors.PetPinkDeep)), CircleShape),
             contentAlignment = Alignment.Center
         ) {
-            Text("🎉", fontSize = 48.sp)
+            val status = paymentStatusState
+            val icon = if (status is UiState.Success && status.data.paymentStatus == "FAILED") "❌" else "🎉"
+            Text(icon, fontSize = 48.sp)
         }
         Spacer(Modifier.height(24.dp))
-        Text("Đặt Lịch Thành Công!", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        
+        val status = paymentStatusState
+        val titleText = when {
+            status is UiState.Success && status.data.paymentStatus == "SUCCESS" -> "Thanh Toán Thành Công!"
+            status is UiState.Success && status.data.paymentStatus == "FAILED" -> "Thanh Toán Thất Bại"
+            booking?.paymentMethod == "Tiền mặt" -> "Đặt Lịch Thành Công!"
+            else -> "Đang Kiểm Tra Thanh Toán..."
+        }
+        
+        Text(titleText, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
         Text("Chúng tôi sẽ liên hệ xác nhận sớm nhất", color = PetSpaColors.MutedForeground, fontSize = 14.sp)
 
-        if (booking != null) {
+        if (bookingId != null) {
             Spacer(Modifier.height(20.dp))
             AppCard(Modifier.fillMaxWidth()) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
                     Text("Mã đặt lịch", fontSize = 11.sp, color = PetSpaColors.MutedForeground)
-                    Text("#${booking.id}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = PetSpaColors.PetPinkDeep)
+                    Text("#$bookingId", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = PetSpaColors.PetPinkDeep)
                 }
                 Spacer(Modifier.height(12.dp))
-                InfoRow("📅 Ngày giờ", "${booking.date} · ${booking.time}")
-                InfoRow("💳 Trạng thái", if (booking.paymentStatus == "fully-paid") "Đã thanh toán đủ ✅" else "Đặt cọc 50% ✅")
+                
+                booking?.let {
+                    InfoRow("📅 Ngày giờ", "${it.date} · ${it.time}")
+                }
+                
+                val pStatusText = when {
+                    status is UiState.Success -> {
+                        val s = status.data.paymentStatus
+                        when(s) {
+                            "SUCCESS" -> "Đã thanh toán thành công ✅"
+                            "FAILED" -> "Thanh toán thất bại ❌"
+                            "PENDING" -> "Đang chờ thanh toán ⏳"
+                            else -> s
+                        }
+                    }
+                    booking?.paymentMethod == "Tiền mặt" -> "Thanh toán tại quầy 💵"
+                    else -> "Đang xử lý..."
+                }
+                InfoRow("💳 Trạng thái", pStatusText)
             }
         }
 
-        Spacer(Modifier.height(40.dp))
-        PrimaryButton("Trang Chủ 🏠", onClick = onHome)
+        if (status is UiState.Error) {
+            Spacer(Modifier.height(12.dp))
+            Text(status.message, color = PetSpaColors.Destructive, fontSize = 12.sp)
+        }
+
+        Spacer(Modifier.height(32.dp))
+        
+        if (status is UiState.Success && status.data.paymentStatus == "FAILED") {
+            PrimaryButton("Thử Thanh Toán Lại 🔄", onClick = {
+                booking?.let { vm.createPayment(it.id.toLong(), it.paymentMethod.lowercase()) }
+            })
+            Spacer(Modifier.height(12.dp))
+        } else if (status is UiState.Loading) {
+            CircularProgressIndicator(color = PetSpaColors.PetPink)
+            Spacer(Modifier.height(12.dp))
+            SecondaryButton("Kiểm Tra Lại", onClick = {
+                booking?.let { vm.checkPaymentStatus(it.id.toLong()) }
+            })
+            Spacer(Modifier.height(12.dp))
+        }
+
+        PrimaryButton("Về Trang Chủ 🏠", onClick = onHome)
         Spacer(Modifier.height(12.dp))
         SecondaryButton("Xem Lịch Hẹn", onClick = onViewAppts)
         Spacer(Modifier.height(20.dp))

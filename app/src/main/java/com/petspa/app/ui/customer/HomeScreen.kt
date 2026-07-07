@@ -20,10 +20,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.petspa.app.model.Booking
 import com.petspa.app.model.Pet
 import com.petspa.app.model.Service
@@ -277,7 +279,24 @@ fun PetsHorizontalList(state: UiState<List<Pet>>, onPetClick: (String) -> Unit, 
                         .clickable { onPetClick(pet.id) }
                         .padding(12.dp)
                 ) {
-                    Text(pet.emoji, fontSize = 32.sp)
+                    Box(
+                        modifier = Modifier
+                            .size(56.dp)
+                            .clip(CircleShape)
+                            .background(PetSpaColors.PetPinkSurface),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (!pet.imageUrl.isNullOrEmpty()) {
+                            AsyncImage(
+                                model = pet.imageUrl,
+                                contentDescription = null,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Text(pet.emoji, fontSize = 24.sp)
+                        }
+                    }
                     Spacer(Modifier.height(8.dp))
                     Text(pet.name, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(pet.breed, fontSize = 10.sp, color = PetSpaColors.MutedForeground, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -380,7 +399,24 @@ fun FeaturedServicesGrid(state: UiState<List<Service>>, onServiceClick: (String)
                             modifier = Modifier.weight(1f),
                             onClick = { onServiceClick(svc.id) }
                         ) {
-                            Text(svc.emoji, fontSize = 32.sp)
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(PetSpaColors.PetPinkSurface),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (!svc.imageUrl.isNullOrEmpty()) {
+                                    AsyncImage(
+                                        model = svc.imageUrl,
+                                        contentDescription = null,
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                } else {
+                                    Text(svc.emoji, fontSize = 20.sp)
+                                }
+                            }
                             Spacer(Modifier.height(8.dp))
                             Text(svc.name, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text("${svc.duration} phút", fontSize = 10.sp, color = PetSpaColors.MutedForeground)

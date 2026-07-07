@@ -185,7 +185,8 @@ fun InputField(
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     visualTransformation: VisualTransformation = VisualTransformation.None,
     leadingIcon: ImageVector? = null,
-    trailingIcon: @Composable (() -> Unit)? = null
+    trailingIcon: @Composable (() -> Unit)? = null,
+    enabled: Boolean = true
 ) {
     Column(Modifier.fillMaxWidth()) {
         if (label != null) {
@@ -199,6 +200,7 @@ fun InputField(
             value = value,
             onValueChange = onValueChange,
             modifier = Modifier.fillMaxWidth(),
+            enabled = enabled,
             placeholder = { if (placeholder != null) Text(placeholder, color = PetSpaColors.MutedForeground.copy(0.5f)) },
             shape = RoundedCornerShape(16.dp),
             isError = error != null,

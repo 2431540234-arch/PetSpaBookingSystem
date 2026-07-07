@@ -21,6 +21,8 @@ data class StaffEntity(
 
     val emoji: String = "👤",
 
+    val avatar: String? = null,
+
     val status: String = "active",
 
     val completedBookings: Int = 0,

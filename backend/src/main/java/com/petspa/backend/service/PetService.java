@@ -31,6 +31,7 @@ public class PetService {
         pet.setMedicalHistory(request.getMedicalHistory());
         pet.setNotes(request.getNotes());
         pet.setEmoji(request.getEmoji());
+        pet.setImageUrl(request.getImageUrl());
         pet.setCustomerId(customerId);
 
         Pet savedPet = petRepository.save(pet);
@@ -62,6 +63,7 @@ public class PetService {
         if (request.getMedicalHistory() != null) pet.setMedicalHistory(request.getMedicalHistory());
         if (request.getNotes() != null) pet.setNotes(request.getNotes());
         if (request.getEmoji() != null) pet.setEmoji(request.getEmoji());
+        if (request.getImageUrl() != null) pet.setImageUrl(request.getImageUrl());
 
         Pet updatedPet = petRepository.save(pet);
         return convertToResponse(updatedPet);
@@ -86,6 +88,7 @@ public class PetService {
         response.setMedicalHistory(pet.getMedicalHistory());
         response.setNotes(pet.getNotes());
         response.setEmoji(pet.getEmoji());
+        response.setImageUrl(pet.getImageUrl());
         response.setCustomerId(pet.getCustomerId());
         return response;
     }

@@ -54,6 +54,8 @@ public class SecurityConfig {
                     // Cho phep xem danh sach dich vu va nhan vien ma khong can token
                     .requestMatchers("GET", "/services", "/services/**").permitAll()
                     .requestMatchers("GET", "/staff/**").permitAll()
+                    .requestMatchers("/api/v1/payments/webhook/**").permitAll()
+                    .requestMatchers("/api/v1/payments/reconcile", "/api/v1/payments/metrics").hasAuthority("OWNER")
                     .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                     .anyRequest().authenticated()
             )

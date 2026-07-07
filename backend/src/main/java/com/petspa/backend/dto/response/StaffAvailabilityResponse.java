@@ -4,7 +4,7 @@ import java.util.List;
 
 public class StaffAvailabilityResponse {
 
-    private Long staffId;
+    private String staffId;
 
     private String staffName;
 
@@ -21,11 +21,11 @@ public class StaffAvailabilityResponse {
     private List<String> availableSlots;
 
     // Getters and Setters
-    public Long getStaffId() {
+    public String getStaffId() {
         return staffId;
     }
 
-    public void setStaffId(Long staffId) {
+    public void setStaffId(String staffId) {
         this.staffId = staffId;
     }
 

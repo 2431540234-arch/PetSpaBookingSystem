@@ -1,42 +1,64 @@
 ﻿package com.petspa.app.network
 
 import com.petspa.app.model.*
+import com.petspa.app.network.dto.request.BookingRequest
+import com.petspa.app.network.dto.request.PaymentCreateRequest
+import com.petspa.app.network.dto.request.PaymentRequest
+import com.petspa.app.network.dto.request.UpdateUserRequest
+import com.petspa.app.network.dto.response.*
+import okhttp3.MultipartBody
 import retrofit2.http.*
 
-// API Retrofit mock - dữ liệu từ Figma mockData
+// API Retrofit - Kết nối Backend thật
 interface ApiService {
     @POST("auth/login")
     suspend fun login(@Body request: LoginRequest): AuthResponse
 
     @GET("pets")
-    suspend fun getPets(): List<Pet>
+    suspend fun getPets(): List<PetResponse>
 
     @POST("pets")
-    suspend fun addPet(@Body pet: Pet): Pet
+    suspend fun addPet(@Body pet: Pet): PetResponse
 
     @PUT("pets/{id}")
-    suspend fun updatePet(@Path("id") id: String, @Body pet: Pet): Pet
+    suspend fun updatePet(@Path("id") id: String, @Body pet: Pet): PetResponse
 
     @DELETE("pets/{id}")
     suspend fun deletePet(@Path("id") id: String)
 
     @GET("services")
-    suspend fun getServices(): List<Service>
+    suspend fun getServices(): List<ServiceResponse>
 
     @GET("bookings")
-    suspend fun getCustomerBookings(): List<Booking>
+    suspend fun getCustomerBookings(): List<BookingResponse>
 
     @POST("bookings")
-    suspend fun createBooking(@Body booking: BookingDraft): Booking
+    suspend fun createBooking(@Body booking: BookingRequest): BookingResponse
+
+    @POST("payments/create")
+    suspend fun createPayment(@Body request: PaymentCreateRequest): PaymentResponseDto
+
+    @GET("payments/{bookingId}/status")
+    suspend fun getPaymentStatus(@Path("bookingId") bookingId: Long): PaymentTransactionDto
+
+    @Multipart
+    @POST("images/upload")
+    suspend fun uploadImage(
+        @Part file: MultipartBody.Part,
+        @Query("type") type: String
+    ): Map<String, String>
+
+    @PUT("bookings/{id}/payment")
+    suspend fun updatePayment(@Path("id") id: String, @Body payment: PaymentRequest): BookingResponse
 
     @DELETE("bookings/{id}")
     suspend fun cancelBooking(@Path("id") id: String)
 
     @PUT("bookings/{id}")
-    suspend fun rescheduleBooking(@Path("id") id: String, @Body data: Map<String, String>): Booking
+    suspend fun rescheduleBooking(@Path("id") id: String, @Body data: Map<String, String>): BookingResponse
 
     @GET("notifications")
-    suspend fun getCustomerNotifications(): List<NotificationItem>
+    suspend fun getCustomerNotifications(): List<NotificationResponse>
 
     @GET("notif-settings")
     suspend fun getNotifSettings(): NotifSettings
@@ -47,17 +69,26 @@ interface ApiService {
     @GET("user/me")
     suspend fun getCustomerUser(): User
 
+    @POST("users/fcm-token")
+    suspend fun updateFcmToken(@Body request: Map<String, String>): Unit
+
+    @PUT("user/me")
+    suspend fun updateCustomerUser(@Body request: UpdateUserRequest): User
+
     @GET("bookings")
-    suspend fun getStaffBookings(): List<Booking>
+    suspend fun getStaffBookings(): List<BookingResponse>
 
     @GET("shifts")
     suspend fun getShifts(): List<Shift>
 
     @GET("notifications")
-    suspend fun getStaffNotifications(): List<NotificationItem>
+    suspend fun getStaffNotifications(): List<NotificationResponse>
 
     @GET("staff/me")
     suspend fun getTechnicianProfile(): TechnicianProfile
+
+    @PUT("staff/me")
+    suspend fun updateTechnicianProfile(@Body profile: TechnicianProfile): TechnicianProfile
 
     @GET("customers")
     suspend fun getCustomers(): List<Customer>
@@ -74,6 +105,9 @@ interface ApiService {
     @GET("staff")
     suspend fun getStaffList(): List<StaffMember>
 
+    @GET("staff/available")
+    suspend fun getAvailableStaff(@Query("date") date: String): List<StaffAvailabilityResponse>
+
     @POST("staff")
     suspend fun addStaff(@Body staff: StaffMember): StaffMember
 
@@ -84,19 +118,19 @@ interface ApiService {
     suspend fun deleteStaff(@Path("id") id: String)
 
     @GET("services")
-    suspend fun getOwnerServices(): List<Service>
+    suspend fun getOwnerServices(): List<ServiceResponse>
 
     @POST("services")
-    suspend fun addService(@Body service: Service): Service
+    suspend fun addService(@Body service: Service): ServiceResponse
 
     @PUT("services/{id}")
-    suspend fun updateService(@Path("id") id: String, @Body service: Service): Service
+    suspend fun updateService(@Path("id") id: String, @Body service: Service): ServiceResponse
 
     @DELETE("services/{id}")
     suspend fun deleteService(@Path("id") id: String)
 
     @GET("bookings")
-    suspend fun getOwnerBookings(): List<Booking>
+    suspend fun getOwnerBookings(): List<BookingResponse>
 
     @GET("staff-requests")
     suspend fun getStaffRequests(): List<StaffRequest>

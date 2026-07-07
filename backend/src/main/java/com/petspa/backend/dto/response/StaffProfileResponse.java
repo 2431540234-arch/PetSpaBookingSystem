@@ -2,7 +2,7 @@ package com.petspa.backend.dto.response;
 
 public class StaffProfileResponse {
 
-    private Long userId;
+    private String userId;
 
     private String specialty;
 
@@ -17,11 +17,11 @@ public class StaffProfileResponse {
     private String status;
 
     // Getters and Setters
-    public Long getUserId() {
+    public String getUserId() {
         return userId;
     }
 
-    public void setUserId(Long userId) {
+    public void setUserId(String userId) {
         this.userId = userId;
     }
 

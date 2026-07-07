@@ -12,14 +12,17 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.petspa.app.model.StaffMember
 import com.petspa.app.model.UiState
 import com.petspa.app.ui.shared.*
@@ -351,14 +354,21 @@ fun OwnerStaffCard(
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Box(
                 modifier = Modifier
-                    .size(40.dp)
-                    .background(
-                        Brush.linearGradient(listOf(Color(0xFF4ECDC4), Color(0xFF45B7D1))),
-                        CircleShape
-                    ),
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(PetSpaColors.PetPinkSurface),
                 contentAlignment = Alignment.Center
             ) {
-                Text(m.name.take(1), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                if (!m.avatar.isNullOrEmpty()) {
+                    AsyncImage(
+                        model = m.avatar,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Text(m.name.take(1), color = PetSpaColors.PetPinkDeep, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                }
             }
 
             Spacer(Modifier.width(12.dp))

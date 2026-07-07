@@ -37,6 +37,8 @@ public class Booking {
     @Column(name = "scheduled_end", nullable = false)
     private LocalDateTime scheduledEnd;
 
+    private String notes;
+
     private String bookingStatus;
 
     private String serviceStage;
@@ -148,6 +150,14 @@ public class Booking {
 
     public void setScheduledEnd(LocalDateTime scheduledEnd) {
         this.scheduledEnd = scheduledEnd;
+    }
+
+    public String getNotes() {
+        return notes;
+    }
+
+    public void setNotes(String notes) {
+        this.notes = notes;
     }
 
     public String getBookingStatus() {

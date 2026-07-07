@@ -3,6 +3,7 @@
 import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.CreationExtras
 import com.petspa.app.data.BookingDataStore
 import com.petspa.app.data.TokenDataStore
@@ -33,18 +34,14 @@ class AppViewModelFactory(
         modelClass: Class<T>,
         extras: CreationExtras
     ): T {
+        val savedStateHandle = extras.createSavedStateHandle()
 
         return when {
-
-            modelClass.isAssignableFrom(
-                AuthViewModel::class.java
-            ) ->
+            modelClass.isAssignableFrom(AuthViewModel::class.java) ->
                 AuthViewModel(repo) as T
 
-            modelClass.isAssignableFrom(
-                CustomerViewModel::class.java
-            ) ->
-                CustomerViewModel(repo) as T
+            modelClass.isAssignableFrom(CustomerViewModel::class.java) ->
+                CustomerViewModel(repo, savedStateHandle) as T
 
             modelClass.isAssignableFrom(
                 StaffViewModel::class.java

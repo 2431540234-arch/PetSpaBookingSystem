@@ -38,6 +38,9 @@ public class Pet {
 
     private String emoji;
 
+    @Column(name = "avatar_url")
+    private String imageUrl;
+
     @Column(name = "customer_id", nullable = false)
     private Long customerId;
 
@@ -135,6 +138,14 @@ public class Pet {
 
     public void setEmoji(String emoji) {
         this.emoji = emoji;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
     }
 
     public Long getCustomerId() {

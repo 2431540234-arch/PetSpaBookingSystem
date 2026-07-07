@@ -21,5 +21,7 @@ data class UserEntity(
 
     val address: String = "",
 
-    val role: String = "CUSTOMER"
+    val role: String = "CUSTOMER",
+
+    val avatarUrl: String? = null
 )

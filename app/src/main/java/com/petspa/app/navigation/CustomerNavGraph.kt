@@ -24,6 +24,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.navigation.navDeepLink
 import com.petspa.app.model.UiState
 import com.petspa.app.ui.customer.*
 import com.petspa.app.ui.shared.BottomNavBar
@@ -270,7 +271,7 @@ fun CustomerNavGraph(authViewModel: AuthViewModel, onLogout: () -> Unit) {
             }
 
             composable("customer_booking_step4") {
-                BookStep4Screen(
+                BookStep5Screen(
                     vm = customerViewModel,
                     onBack = { navController.popBackStack() },
                     onNext = { navController.navigate("customer_booking_step5") }
@@ -278,15 +279,7 @@ fun CustomerNavGraph(authViewModel: AuthViewModel, onLogout: () -> Unit) {
             }
 
             composable("customer_booking_step5") {
-                BookStep5Screen(
-                    vm = customerViewModel,
-                    onBack = { navController.popBackStack() },
-                    onNext = { navController.navigate("customer_booking_step6") }
-                )
-            }
-
-            composable("customer_booking_step6") {
-                BookStep6Screen(
+                BookStep4Screen(
                     vm = customerViewModel,
                     onBack = { navController.popBackStack() },
                     onNext = { navController.navigate("customer_booking_step7") }
@@ -329,6 +322,38 @@ fun CustomerNavGraph(authViewModel: AuthViewModel, onLogout: () -> Unit) {
                 )
             }
 
+            // Màn hình kết quả thanh toán qua Deep Link
+            composable(
+                route = "payment_result?bookingId={bookingId}&gateway={gateway}&orderId={orderId}",
+                deepLinks = listOf(
+                    navDeepLink { uriPattern = "petspa://payment/callback?bookingId={bookingId}&gateway={gateway}&orderId={orderId}" },
+                    navDeepLink { uriPattern = "petspa://payment/callback?orderId={orderId}&gateway={gateway}" }
+                ),
+                arguments = listOf(
+                    navArgument("bookingId") { type = NavType.StringType; defaultValue = "" },
+                    navArgument("gateway") { type = NavType.StringType; defaultValue = "" },
+                    navArgument("orderId") { type = NavType.StringType; defaultValue = "" }
+                )
+            ) { backStackEntry ->
+                val bId = backStackEntry.arguments?.getString("bookingId")?.ifEmpty { null }
+                    ?: backStackEntry.arguments?.getString("orderId") ?: ""
+                
+                PaymentResultDeepLinkScreen(
+                    vm = customerViewModel,
+                    bookingId = bId,
+                    onHome = {
+                        navController.navigate("customer_home") {
+                            popUpTo(navController.graph.id) { inclusive = true }
+                        }
+                    },
+                    onViewAppts = {
+                        navController.navigate("customer_appointments") {
+                            popUpTo("customer_home")
+                        }
+                    }
+                )
+            }
+
             // Đăng ký thông báo
             composable("customer_notifications") {
                 NotificationsScreen(
@@ -352,6 +377,7 @@ fun CustomerNavGraph(authViewModel: AuthViewModel, onLogout: () -> Unit) {
                     onEdit = { navController.navigate("customer_profile_edit") },
                     onChangePassword = { navController.navigate("customer_change_password") },
                     onNotifSettings = { navController.navigate("customer_notification_settings") },
+                    onPaymentHistory = { navController.navigate("customer_payment_history") },
                     onLogout = onLogout
                 )
             }
@@ -361,6 +387,13 @@ fun CustomerNavGraph(authViewModel: AuthViewModel, onLogout: () -> Unit) {
                     vm = customerViewModel,
                     onBack = { navController.popBackStack() },
                     onSaved = { navController.popBackStack() }
+                )
+            }
+
+            composable("customer_payment_history") {
+                PaymentHistoryScreen(
+                    vm = customerViewModel,
+                    onBack = { navController.popBackStack() }
                 )
             }
 

@@ -13,7 +13,8 @@ data class User(
     val gender: String = "",
     val dob: String = "",
     val address: String = "",
-    val role: UserRole = UserRole.CUSTOMER
+    val role: UserRole = UserRole.CUSTOMER,
+    val avatarUrl: String? = null
 )
 
 data class AuthResponse(
@@ -57,6 +58,7 @@ data class StaffMember(
     val specialty: String = "",
     val role: String = "",
     val emoji: String = "👤",
+    val avatar: String? = null,
     val status: String = "active",
     val completedBookings: Int = 0,
     val customers: Int = 0,
@@ -161,6 +163,17 @@ data class BookingDraft(
 
 data class RevenuePoint(val label: String, val revenue: Long, val bookings: Int)
 data class TopService(val name: String, val count: Int, val revenue: Long)
+
+data class StaffAvailabilityResponse(
+    val staffId: Long,
+    val staffName: String,
+    val specialty: String,
+    val position: String,
+    val avatar: String,
+    val expertise: String,
+    val status: String,
+    val availableSlots: List<String>
+)
 
 data class TechnicianProfile(
     val id: String,

@@ -5,11 +5,14 @@ import com.petspa.backend.entity.Notification;
 import com.petspa.backend.exception.ResourceNotFoundException;
 import com.petspa.backend.repository.NotificationRepository;
 import com.petspa.backend.repository.NotificationSettingRepository;
+import com.petspa.backend.service.notification.FirebaseNotificationService;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -17,11 +20,14 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final NotificationSettingRepository notificationSettingRepository;
+    private final FirebaseNotificationService firebaseNotificationService;
 
     public NotificationService(NotificationRepository notificationRepository,
-                               NotificationSettingRepository notificationSettingRepository) {
+                               NotificationSettingRepository notificationSettingRepository,
+                               FirebaseNotificationService firebaseNotificationService) {
         this.notificationRepository = notificationRepository;
         this.notificationSettingRepository = notificationSettingRepository;
+        this.firebaseNotificationService = firebaseNotificationService;
     }
 
     public List<NotificationResponse> getNotificationsByUserId(Long userId) {
@@ -91,6 +97,26 @@ public class NotificationService {
         sendNotification(Long.valueOf(userId), "request_rejected", "Yêu cầu bị từ chối", "Yêu cầu của bạn đã bị từ chối", Long.valueOf(requestId));
     }
 
+    public void notifyOwnerNewBooking(String bookingId) {
+        Map<String, String> data = Map.of(
+            "type", "booking_new",
+            "bookingId", bookingId
+        );
+        firebaseNotificationService.sendToRole(com.petspa.backend.enums.UserRole.OWNER, "Đơn hàng mới", "Có một lịch đặt dịch vụ mới cần xác nhận", data);
+    }
+
+    public void notifyOwnerNewRequest(String requestId, String staffName) {
+        Map<String, String> data = Map.of(
+            "type", "request_new",
+            "requestId", requestId
+        );
+        firebaseNotificationService.sendToRole(com.petspa.backend.enums.UserRole.OWNER, "Yêu cầu từ nhân viên", staffName + " vừa gửi một yêu cầu mới", data);
+    }
+
+    public void notifyStaffNewBooking(String staffId, String bookingId) {
+        sendNotification(Long.valueOf(staffId), "booking_new", "Lịch hẹn mới", "Bạn được phân công một lịch hẹn mới", Long.valueOf(bookingId));
+    }
+
     private void sendNotification(Long userId, String type, String title, String message, Long relatedId) {
         Notification notification = new Notification();
         notification.setUserId(userId);
@@ -102,6 +128,15 @@ public class NotificationService {
         notification.setIsRead(false);
 
         notificationRepository.save(notification);
+
+        // FCM Integration
+        Map<String, String> data = new HashMap<>();
+        data.put("type", type);
+        data.put("bookingId", relatedId != null ? relatedId.toString() : "");
+        data.put("title", title);
+        data.put("body", message);
+
+        firebaseNotificationService.sendToUser(userId, title, message, data);
     }
 
     private NotificationResponse convertToResponse(Notification notification) {

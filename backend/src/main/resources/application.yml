@@ -27,3 +27,29 @@ app:
   jwt:
     secret: "doi-chuoi-bi-mat-nay-thanh-chuoi-dai-it-nhat-32-ky-tu-truoc-khi-deploy-thuc-te"
     expiration-ms: 86400000   # 24 gio
+  firebase:
+    config-path: "C:/Users/Dell/Downloads/petspa/backend/src/main/resources/firebase-service-account.json"
+
+cloudinary:
+  cloud-name: "petspa-cloud"
+  api-key: "123456789"
+  api-secret: "abcdefghi"
+
+payment:
+  momo:
+    partnerCode: "MOMOBKUN20220314"
+    accessKey: "klm05OTp8m0995p0"
+    secretKey: "at67qH6v098Ym6W885A1u0300S99616X"
+    endpoint: "https://test-payment.momo.vn/v2/gateway/api/create"
+    redirectUrl: "http://localhost:8080/api/v1/payments/result/momo"
+    ipnUrl: "https://petspa.requestcatcher.com/momo"
+  vnpay:
+    tmnCode: "2QX6W9QD"
+    hashSecret: "GETLPTZOUBMTXCKOKUHSNMXYVNJXNKEO"
+    endpoint: "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html"
+    returnUrl: "http://localhost:8080/api/v1/payments/result/vnpay"
+  zalopay:
+    appId: "2553"
+    key1: "PcY9S9U9U9U9U9U9U9U9U9U9U9U9U9U9"
+    key2: "kL9S9U9U9U9U9U9U9U9U9U9U9U9U9U9U"
+    endpoint: "https://sb-openapi.zalopay.vn/v2/create"

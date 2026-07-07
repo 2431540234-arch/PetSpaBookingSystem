@@ -71,11 +71,11 @@ public class StaffService {
     }
 
     private StaffAvailabilityResponse buildAvailabilityResponse(User user, String date) {
-        StaffProfile staffProfile = staffProfileRepository.findByUserId(user.getId())
+        StaffProfile staffProfile = staffProfileRepository.findByUserId(String.valueOf(user.getId()))
                 .orElse(new StaffProfile());
 
         StaffAvailabilityResponse response = new StaffAvailabilityResponse();
-        response.setStaffId(user.getId());
+        response.setStaffId(String.valueOf(user.getId()));
         response.setStaffName(user.getName());
         response.setSpecialty(staffProfile.getSpecialty());
         response.setPosition(staffProfile.getPosition());

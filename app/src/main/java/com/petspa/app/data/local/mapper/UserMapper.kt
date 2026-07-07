@@ -18,7 +18,8 @@ fun UserEntity.toUser(): User {
         gender = gender,
         dob = dob,
         address = address,
-        role = userRole
+        role = userRole,
+        avatarUrl = avatarUrl
     )
 }
 
@@ -31,6 +32,7 @@ fun User.toEntity(): UserEntity {
         gender = gender,
         dob = dob,
         address = address,
-        role = role.name
+        role = role.name,
+        avatarUrl = avatarUrl
     )
 }

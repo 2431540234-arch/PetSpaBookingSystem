@@ -30,17 +30,16 @@ public class JwtTokenProvider {
         Date expiry = new Date(now.getTime() + jwtExpirationMs);
 
         return Jwts.builder()
-                .subject(String.valueOf(user.getId()))
+                .setSubject(String.valueOf(user.getId()))
                 .claim("role", user.getRole().name())
                 .claim("email", user.getEmail())
-                .issuedAt(now)
-                .expiration(expiry)
+                .setIssuedAt(now)
+                .setExpiration(expiry)
                 .signWith(key())
                 .compact();
     }
 
     public String getUserIdFromToken(String token) {
-        // Use the recommended parserBuilder API for jjwt 0.12.x
         Claims claims = Jwts.parserBuilder()
                 .setSigningKey(key())
                 .build()
